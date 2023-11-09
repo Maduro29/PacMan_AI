@@ -296,6 +296,7 @@ class CornersProblem(search.SearchProblem):
         space)
         """
         "*** YOUR CODE HERE ***"
+        return (self.startingPosition, (False, False, False, False))
         util.raiseNotDefined()
 
     def isGoalState(self, state: Any):
@@ -303,7 +304,26 @@ class CornersProblem(search.SearchProblem):
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        
+        # Giải nén state thành hai phần tử
+        state_info, corners_visited = state
+
+        # Kiểm tra xem corners_visited có phải là None không
+        if corners_visited is None:
+            print("corners_visited is None!")
+        else:
+            # Giả định ban đầu là tất cả các góc đã được thăm
+            all_corners_visited = True
+
+            # Duyệt qua từng góc
+            for i in range(len(corners_visited)):
+                # Nếu góc chưa được thăm
+                if not corners_visited[i]:
+                    # Cập nhật all_corners_visited và thoát khỏi vòng lặp
+                    all_corners_visited = False
+                    break
+        return all_corners_visited
+        # util.raiseNotDefined()
 
     def getSuccessors(self, state: Any):
         """
@@ -324,6 +344,39 @@ class CornersProblem(search.SearchProblem):
             #   dx, dy = Actions.directionToVector(action)
             #   nextx, nexty = int(x + dx), int(y + dy)
             #   hitsWall = self.walls[nextx][nexty]
+            
+            # Giải nén state thành hai phần tử
+            position, visited_corners = state
+            x, y = position
+
+            # Tính toán hướng di chuyển
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+
+            # Kiểm tra xem có va chạm với tường không
+            hitsWall = self.walls[nextx][nexty]
+
+            # Nếu không va chạm với tường
+            if not hitsWall:
+                # Tạo một bản sao của visited_corners
+                next_visited_corners = list(visited_corners)
+
+                # Kiểm tra xem có phải góc không
+                if (nextx, nexty) in self.corners:
+                    # Tìm vị trí của góc
+                    corner_index = self.corners.index((nextx, nexty))
+
+                    # Đánh dấu góc đã được thăm
+                    next_visited_corners[corner_index] = True
+
+                # Tạo state tiếp theo
+                nextState = ((nextx, nexty), tuple(next_visited_corners))
+
+                # Định nghĩa chi phí
+                cost = 1
+
+                # Thêm vào danh sách successors
+                successors.append((nextState, action, cost))
 
             "*** YOUR CODE HERE ***"
 
