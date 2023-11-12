@@ -231,7 +231,7 @@ def pacmanSuccessorAxiomSingle(x: int, y: int, time: int, walls_grid: List[List[
         return None
     
     "*** BEGIN YOUR CODE HERE ***"
-     return PropSymbolExpr(pacman_str, x, y, time=now) % disjoin(possible_causes)
+    return PropSymbolExpr(pacman_str, x, y, time=now) % disjoin(possible_causes)
     "*** END YOUR CODE HERE ***"
 
 
@@ -381,7 +381,34 @@ def positionLogicPlan(problem) -> List:
     KB = []
 
     "*** BEGIN YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    #Initial position
+    KB.append(PropSymbolExpr(pacman_str, x0, y0, time= 0))
+
+    for timestep in range(50):
+        print(timestep)
+        
+        """Pacman can only be in one place at its timestep"""
+        list_pacman = []
+        for x, y in non_wall_coords:
+            list_pacman.append(PropSymbolExpr(pacman_str, x, y, time= timestep)) 
+        KB.append(exactlyOne(list_pacman))
+    
+        """Pacman can take only one action at each timestep"""
+        list_actions = []
+        for action in DIRECTIONS:
+            list_actions.append(PropSymbolExpr(action, time= timestep))        
+        KB.append(exactlyOne(list_actions))
+
+        """Edge case: 
+                - time must be greater than 0 beacuse pacmanSuccessorAxiomSingle checks for t-1 as well"""
+        if timestep > 0:
+            for x, y in non_wall_coords:
+                KB.append(pacmanSuccessorAxiomSingle(x, y, timestep, walls_grid))
+
+        """If we find a model then we return it"""
+        if findModel(conjoin(KB) & PropSymbolExpr(pacman_str, xg, yg, time= timestep)) != False:
+            return extractActionSequence(findModel(conjoin(KB) & PropSymbolExpr(pacman_str, xg, yg, time= timestep)), actions)
+    
     "*** END YOUR CODE HERE ***"
 
 #______________________________________________________________________________
