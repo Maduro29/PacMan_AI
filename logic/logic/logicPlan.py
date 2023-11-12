@@ -572,9 +572,38 @@ def mapping(problem, agent) -> Generator:
     KB.append(conjoin(outer_wall_sent))
 
     "*** BEGIN YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # util.raiseNotDefined()
+    
+    # Khởi tạo tri thức với vị trí ban đầu của Pacman và thông tin về tường
+    KB = [PropSymbolExpr(pacman_str, pac_x_0, pac_y_0, time=0), ~PropSymbolExpr(wall_str, pac_x_0, pac_y_0)]
 
+    # Duyệt qua từng bước thời gian
     for t in range(agent.num_timesteps):
+        # Thêm các axioms cho Pacman, hành động và quy tắc nhận biết vào tri thức
+        KB.extend([
+            pacphysicsAxioms(t, all_coords, non_outer_wall_coords, known_map, sensorAxioms, allLegalSuccessorAxioms),
+            PropSymbolExpr(agent.actions[t], time=t),
+            fourBitPerceptRules(t, agent.getPercepts())
+        ])
+
+        # Duyệt qua từng vị trí không phải là tường ngoài
+        for x, y in non_outer_wall_coords:
+            # Nếu vị trí đã biết thì bỏ qua
+            if known_map[x][y] != -1:
+                continue
+            # Khởi tạo biểu thức cho tường
+            wall_expr = PropSymbolExpr(wall_str, x, y)
+            # Nếu biểu thức tường là đúng thì cập nhật bản đồ và thêm vào tri thức
+            if entails(conjoin(KB), wall_expr):
+                known_map[x][y] = 1
+                KB.append(wall_expr)
+            # Nếu biểu thức tường là sai thì cập nhật bản đồ và thêm vào tri thức
+            elif entails(conjoin(KB), ~wall_expr):
+                known_map[x][y] = 0
+                KB.append(~wall_expr)
+
+        # Di chuyển đến trạng thái tiếp theo
+        agent.moveToNextState(agent.actions[t])
         "*** END YOUR CODE HERE ***"
         yield known_map
 
@@ -604,9 +633,51 @@ def slam(problem, agent) -> Generator:
     KB.append(conjoin(outer_wall_sent))
 
     "*** BEGIN YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # util.raiseNotDefined()
 
+    # Thêm vị trí ban đầu của Pacman và thông tin về tường vào tri thức
+    KB.append(PropSymbolExpr(pacman_str, pac_x_0, pac_y_0, time=0))
+    KB.append(~PropSymbolExpr(wall_str, pac_x_0, pac_y_0))
+
+    # Cập nhật bản đồ đã biết
+    known_map[pac_x_0][pac_y_0] = 0
+
+    # Duyệt qua từng bước thời gian
     for t in range(agent.num_timesteps):
+        # Thêm các axioms cho Pacman và quy tắc nhận biết vào tri thức
+        KB.append(pacphysicsAxioms(t, all_coords, non_outer_wall_coords, known_map, SLAMSensorAxioms, SLAMSuccessorAxioms))
+        KB.append(numAdjWallsPerceptRules(t, agent.getPercepts()))
+
+        # Khởi tạo danh sách vị trí có thể
+        possible_locations = []
+
+        # Duyệt qua từng vị trí không phải là tường ngoài
+        for coord in non_outer_wall_coords:
+            # Nếu vị trí là đúng thì thêm vào danh sách vị trí có thể và tri thức
+            if entails(conjoin(KB), PropSymbolExpr(pacman_str, coord[0], coord[1], time=t)):
+                possible_locations.append(coord)
+                KB.append(PropSymbolExpr(pacman_str, coord[0], coord[1], time=t))
+            # Nếu vị trí là sai thì thêm vào tri thức
+            elif entails(conjoin(KB), ~PropSymbolExpr(pacman_str, coord[0], coord[1], time=t)):
+                KB.append(~PropSymbolExpr(pacman_str, coord[0], coord[1], time=t))
+            # Nếu không biết thì thêm vào danh sách vị trí có thể
+            else:
+                possible_locations.append(coord)
+
+            # Nếu vị trí là tường thì cập nhật bản đồ đã biết và thêm vào tri thức
+            if entails(conjoin(KB), PropSymbolExpr(wall_str, coord[0], coord[1])):
+                known_map[coord[0]][coord[1]] = 1
+                KB.append(PropSymbolExpr(wall_str, coord[0], coord[1]))
+            # Nếu vị trí không phải là tường thì cập nhật bản đồ đã biết và thêm vào tri thức
+            elif entails(conjoin(KB), ~PropSymbolExpr(wall_str, coord[0], coord[1])):
+                known_map[coord[0]][coord[1]] = 0
+                KB.append(~PropSymbolExpr(wall_str, coord[0], coord[1]))
+
+        # Thêm hành động vào tri thức
+        KB.append(PropSymbolExpr(agent.actions[t], time=t))
+
+        # Di chuyển đến trạng thái tiếp theo
+        agent.moveToNextState(agent.actions[t])
         "*** END YOUR CODE HERE ***"
         yield (known_map, possible_locations)
 
