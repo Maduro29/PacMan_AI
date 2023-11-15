@@ -98,6 +98,17 @@ class DigitClassificationModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
+        self.batch_size = 100
+        self.learning_rate = 0.5
+        self.w1 = nn.Parameter(784, 256)
+        self.w2 = nn.Parameter(256, 128)
+        self.w3 = nn.Parameter(128, 64)
+        self.w4 = nn.Parameter(64, 10)
+        self.b1 = nn.Parameter(1, 256)
+        self.b2 = nn.Parameter(1, 128)
+        self.b3 = nn.Parameter(1, 64)
+        self.b4 = nn.Parameter(1, 10)
+        self.params = [self.w1, self.b1, self.w2, self.b2, self.w3, self.b3, self.w4, self.b4]
 
     def run(self, x):
         """
@@ -114,6 +125,12 @@ class DigitClassificationModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        first_layer = nn.ReLU(nn.AddBias(nn.Linear(x, self.w1), self.b1))
+        second_layer = nn.ReLU(nn.AddBias(nn.Linear(first_layer, self.w2), self.b2))
+        third_layer = nn.ReLU(nn.AddBias(nn.Linear(second_layer, self.w3), self.b3))
+        output_layer = nn.AddBias(nn.Linear(third_layer, self.w4), self.b4)
+
+        return output_layer
 
     def get_loss(self, x, y):
         """
@@ -129,12 +146,19 @@ class DigitClassificationModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(x), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        while dataset.get_validation_accuracy() < 0.975:
+            for x, y in dataset.iterate_once(self.batch_size):
+                loss = self.get_loss(x, y)
+                gradients = nn.gradients(loss, self.params)
+                for i in range(len(self.params)):
+                    self.params[i].update(gradients[i], -self.learning_rate)
 
 class LanguageIDModel(object):
     """
