@@ -355,6 +355,13 @@ def checkLocationSatisfiability(x1_y1: Tuple[int, int], x0_y0: Tuple[int, int], 
 
     "*** BEGIN YOUR CODE HERE ***"
     util.raiseNotDefined()
+    KB.append(pacphysicsAxioms(0, all_coords, non_outer_wall_coords, walls_grid, None, allLegalSuccessorAxioms))
+    KB.append(pacphysicsAxioms(1, all_coords, non_outer_wall_coords, walls_grid, None, allLegalSuccessorAxioms))
+    KB.append(PropSymbolExpr(pacman_str, x0, y0, time=0))
+    KB.append(PropSymbolExpr(action0, time=0))
+    KB.append(PropSymbolExpr(action1, time=1))  
+    pacman_loc_t1 = PropSymbolExpr(pacman_str, x1, y1, time=1)
+    return findModel(conjoin(KB + [pacman_loc_t1])), findModel(conjoin(KB + [~pacman_loc_t1]))  
     "*** END YOUR CODE HERE ***"
 
 #______________________________________________________________________________
