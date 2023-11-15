@@ -27,7 +27,6 @@ class PerceptronModel(object):
         Returns: a node containing a single number (the score)
         """
         "*** YOUR CODE HERE ***"
-        return nn.DotProduct(self.w, x)
 
     def get_prediction(self, x):
         """
@@ -36,22 +35,12 @@ class PerceptronModel(object):
         Returns: 1 or -1
         """
         "*** YOUR CODE HERE ***"
-        if nn.as_scalar(self.run(x)) >= 0:
-            return 1
-        return -1
 
     def train(self, dataset):
         """
         Train the perceptron until convergence.
         """
         "*** YOUR CODE HERE ***"
-        converged = False
-        while not converged:
-            converged = True
-            for x, y in dataset.iterate_once(batch_size=1):
-                if self.get_prediction(x) != nn.as_scalar(y):
-                    converged = False
-                    self.w.update(x, nn.as_scalar(y))
 
 class RegressionModel(object):
     """
@@ -62,11 +51,6 @@ class RegressionModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
-        #hidden layer size 512
-        self.w1 = nn.Parameter(1, 512)
-        self.b1 = nn.Parameter(1, 512)
-        self.w2 = nn.Parameter(512, 1)
-        self.b2 = nn.Parameter(1, 1)
 
     def run(self, x):
         """
@@ -78,13 +62,7 @@ class RegressionModel(object):
             A node with shape (batch_size x 1) containing predicted y-values
         """
         "*** YOUR CODE HERE ***"
-        #2 linear layers
-        linear_1 = nn.Linear(x, self.w1)
-        reLu_1 = nn.ReLU(nn.AddBias(linear_1, self.b1))
-        linear_2 = nn.Linear(reLu_1, self.w2)
 
-        return nn.AddBias(linear_2, self.b2)
-    
     def get_loss(self, x, y):
         """
         Computes the loss for a batch of examples.
@@ -96,33 +74,12 @@ class RegressionModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
-        predict = self.run(x)
-        return nn.SquareLoss(predict, x)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
-        batch_size = 200
-        for x, y in dataset.iterate_forever(batch_size):
-            loss = self.get_loss(x, y)
-            #gradient of the loss with the parameter
-            grad_wrt_b1, grad_wrt_b2, grad_wrt_w1, grad_wrt_w2 = nn.gradients(loss, [self.b1, self.b2, self.w1, self.w2])
-
-            #learning rate
-            multiplier  = 0.05
-
-            #update parameters
-            self.b1.update(grad_wrt_b1, multiplier)
-            self.b2.update(grad_wrt_b2, multiplier)
-            self.w1.update(grad_wrt_w1, multiplier)
-            self.w2.update(grad_wrt_w2, multiplier)
-
-            #if loss < 0.02
-            if nn.as_scalar(loss) < 0.02:
-                break
-        return None
 
 class DigitClassificationModel(object):
     """
@@ -189,7 +146,7 @@ class LanguageIDModel(object):
     """
     def __init__(self):
         # Our dataset contains words from five different languages, and the
-        # combined alphabets of the five languages contain a total of 47 unique
+        # combined -self.multiplierbets of the five languages contain a total of 47 unique
         # characters.
         # You can refer to self.num_chars or len(self.languages) in your code
         self.num_chars = 47
@@ -197,7 +154,17 @@ class LanguageIDModel(object):
 
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
-
+        self.batch_size = 32
+        self.learning_rate = .1
+        self.initial_w = nn.Parameter(self.num_chars, 256)
+        self.initial_bias = nn.Parameter(1, 256)
+        self.x_w = nn.Parameter(self.num_chars, 256)
+        self.h_w = nn.Parameter(256, 256)
+        self.bias = nn.Parameter(1, 256)
+        self.output_w = nn.Parameter(256, len(self.languages))
+        self.output_bias = nn.Parameter(1, len(self.languages))
+        self.params = [self.initial_w, self.initial_bias, self.x_w, self.h_w, self.bias, self.output_w, self.output_bias]
+        
     def run(self, xs):
         """
         Runs the model for a batch of examples.
@@ -212,7 +179,7 @@ class LanguageIDModel(object):
         xs[1] will be a node that contains a 1 at position (7, 0). Here the
         index 7 reflects the fact that "cat" is the last word in the batch, and
         the index 0 reflects the fact that the letter "a" is the inital (0th)
-        letter of our combined alphabet for this task.
+        letter of our combined -self.multiplierbet for this task.
 
         Your model should use a Recurrent Neural Network to summarize the list
         `xs` into a single node of shape (batch_size x hidden_size), for your
@@ -228,7 +195,13 @@ class LanguageIDModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
-
+        h_i = nn.ReLU(nn.AddBias(nn.Linear(xs[0], self.initial_w), self.initial_bias))
+        for char in xs[1:]:
+            h_i = nn.ReLU(nn.AddBias(nn.Add(nn.Linear(char, self.x_w),\
+                          nn.Linear(h_i, self.h_w)), self.bias))
+        output = nn.AddBias(nn.Linear(h_i, self.output_w), self.output_bias)
+        return output
+    
     def get_loss(self, xs, y):
         """
         Computes the loss for a batch of examples.
@@ -244,9 +217,16 @@ class LanguageIDModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(xs), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        while dataset.get_validation_accuracy() < 0.815:
+            for x, y in dataset.iterate_once(self.batch_size):
+                loss = self.get_loss(x, y)
+                gradients = nn.gradients(loss, self.params)
+                for i in range(len(self.params)):
+                    self.params[i].update(gradients[i], -self.learning_rate)
