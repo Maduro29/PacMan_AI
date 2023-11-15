@@ -50,7 +50,14 @@ class RegressionModel(object):
     """
     def __init__(self):
         # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
+        "*** YOUR CODE HERE ***"       
+        self.batch_size = 200
+        self.learning_rate  = 0.05
+        #hidden layer size 512
+        self.w1 = nn.Parameter(1,512)
+        self.b1 = nn.Parameter(1,512)
+        self.w2 = nn.Parameter(512,1)
+        self.b2 = nn.Parameter(1,1)
 
     def run(self, x):
         """
@@ -62,7 +69,13 @@ class RegressionModel(object):
             A node with shape (batch_size x 1) containing predicted y-values
         """
         "*** YOUR CODE HERE ***"
+        #2 linear layers
+        linear_1 = nn.Linear(x, self.w1)
+        reLu_1 = nn.ReLU(nn.AddBias(linear_1, self.b1))
+        linear_2 = nn.Linear(reLu_1, self.w2)
 
+        return nn.AddBias(linear_2, self.b2)
+        
     def get_loss(self, x, y):
         """
         Computes the loss for a batch of examples.
@@ -74,12 +87,27 @@ class RegressionModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        predict = self.run(x)
+        return nn.SquareLoss(predict, y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        for x, y in dataset.iterate_forever(self.batch_size):
+            loss = self.get_loss(x, y)
+            #gradient of the loss with the parameter
+            grad_wrt_b1, grad_wrt_b2, grad_wrt_w1, grad_wrt_w2 = nn.gradients(loss, [self.b1, self.b2, self.w1, self.w2])
+            #update parameters
+            self.b1.update(grad_wrt_b1, -self.learning_rate)
+            self.b2.update(grad_wrt_b2, -self.learning_rate)
+            self.w1.update(grad_wrt_w1, -self.learning_rate)
+            self.w2.update(grad_wrt_w2, -self.learning_rate)
+            #if loss < 0.02, stop training
+            if nn.as_scalar(self.get_loss(x, y)) < 0.02:
+                break
+
 
 class DigitClassificationModel(object):
     """
